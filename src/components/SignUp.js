@@ -1,13 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import * as faceapi from 'face-api.js';
+import * as faceapi from 'face-api.js';  
+import { Link } from 'react-router-dom';
 
 const SignUp = () => {
   const [imageSrc, setImageSrc] = useState(null);
   const [isCameraActive, setIsCameraActive] = useState(true);
   const [faceDescriptor, setFaceDescriptor] = useState(null);
+  const [userData, setUserData] = useState(null);
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-
+  const canvasRef = useRef(null); 
+  
   const initializeFaceApi = async () => {
     try {
       await faceapi.tf.setBackend('webgl');
@@ -46,6 +48,8 @@ const SignUp = () => {
       const image = canvas.toDataURL('image/png');
       setImageSrc(image);
       setIsCameraActive(false);
+
+      // Store face descriptor separately
       setFaceDescriptor(detections.descriptor);
     }
   };
@@ -53,13 +57,23 @@ const SignUp = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const formObject = Object.fromEntries(formData.entries());
-    formObject.faceDescriptor = faceDescriptor;  // Add face descriptor to form data
+    const user = {
+      email: formData.get('email'),
+      name: formData.get('name'),
+      mobile: formData.get('mobile'),
+      gender: formData.get('gender'),
+      faceDescriptor: faceDescriptor,
+    }; 
+    // Store user data in local storage
     const users = JSON.parse(localStorage.getItem('users')) || [];
-    users.push(formObject);
+    users.push(user);
     localStorage.setItem('users', JSON.stringify(users));
-    console.log('Form Data with Descriptor:', formObject); 
+
+    // Update state to show user card
+    setUserData(user);
   };
+
+  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600">
@@ -71,7 +85,7 @@ const SignUp = () => {
               Capture Image
             </button>
           </div>
-        ) : (
+        ) : faceDescriptor && !userData ? (
           <form onSubmit={handleSubmit}>
             <div className="text-center mb-4">
               <img src={imageSrc} alt="Captured" className="w-full h-auto rounded-lg mb-4" />
@@ -100,7 +114,19 @@ const SignUp = () => {
               Submit
             </button>
           </form>
-        )}
+        ) : userData ? (
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Welcome, {userData.name}!</h2>
+            <p className="mb-2"><strong>Email:</strong> {userData.email}</p>
+            <p className="mb-2"><strong>Mobile:</strong> {userData.mobile}</p>
+            <p className="mb-2"><strong>Gender:</strong> {userData.gender}</p>
+            <Link to="/"> 
+            <button className="mt-4 px-6 py-3 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600">
+              Sign Out
+            </button>
+            </Link>
+          </div>
+        ) : null}
         <canvas ref={canvasRef} className="hidden"></canvas>
       </div>
     </div>
