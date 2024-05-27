@@ -4,6 +4,7 @@ import * as faceapi from 'face-api.js';
 const SignUp = () => {
   const [imageSrc, setImageSrc] = useState(null);
   const [isCameraActive, setIsCameraActive] = useState(true);
+  const [faceDescriptor, setFaceDescriptor] = useState(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -45,13 +46,19 @@ const SignUp = () => {
       const image = canvas.toDataURL('image/png');
       setImageSrc(image);
       setIsCameraActive(false);
+      setFaceDescriptor(detections.descriptor);
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    console.log(Object.fromEntries(formData.entries())); // Log form data to the console
+    const formObject = Object.fromEntries(formData.entries());
+    formObject.faceDescriptor = faceDescriptor;  // Add face descriptor to form data
+    const users = JSON.parse(localStorage.getItem('users')) || [];
+    users.push(formObject);
+    localStorage.setItem('users', JSON.stringify(users));
+    console.log('Form Data with Descriptor:', formObject); 
   };
 
   return (
