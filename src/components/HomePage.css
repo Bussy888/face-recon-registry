@@ -1,0 +1,54 @@
+/* Fondo y alineación principal */
+.homepage-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(to bottom left, black, #525252);
+    padding: 24px;
+  }
+  
+  /* Estilos para el logo */
+  .homepage-logo {
+    width: 550px;
+    height: auto;
+    margin-bottom: 40px;
+  }
+  
+  @media (min-width: 768px) {
+    .homepage-logo {
+      width: 500px; /* Más grande en tablet */
+    }
+  }
+  
+  /* Contenedor de botones */
+  .homepage-buttons {
+    width: 100%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px; /* Espacio grande entre los botones */
+    text-align: center;
+  }
+  
+  /* Estilos individuales de los botones */
+  .homepage-button {
+    width: 100%;
+    padding: 20px 0;
+    background-color: white;
+    color: #f59e0b; /* Amber-500 */
+    font-weight: bold;
+    font-size: 1.5rem; /* Texto grande */
+    border-radius: 16px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
+    transition: background-color 0.3s, transform 0.3s;
+    cursor: pointer;
+  }
+  
+  /* Efecto al pasar el mouse */
+  .homepage-button:hover {
+    background-color: #fef3c7; /* Amber-100 */
+    transform: scale(1.05);
+  }
+  

@@ -1,19 +1,28 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import './HomePage.css'; // Importamos el archivo CSS
 
 const HomePage = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-blue-500 to-purple-600">
-      <div className="text-center">
-        <Link to="/signin">
-          <button className="m-4 px-6 py-3 bg-white text-blue-500 font-semibold rounded-lg shadow-md hover:bg-blue-100">
-            Sign In
-          </button>
-        </Link>
+    <div className="homepage-container">
+      {/* Logo en la parte superior */}
+      <img
+        src="/logo.png"
+        alt="Logo de la Empresa"
+        className="homepage-logo"
+      />
+
+      <div className="homepage-buttons">
         <Link to="/signup">
-          <button className="m-4 px-6 py-3 bg-white text-blue-500 font-semibold rounded-lg shadow-md hover:bg-blue-100">
-            Sign Up
-          </button>
+          <button className="homepage-button">Registrarme Por Primera Vez</button>
+        </Link>
+
+        <Link to="/signin">
+          <button className="homepage-button">Registrarme</button>
+        </Link>
+        
+        <Link to="/invitados">
+          <button className="homepage-button">Solo Invitados</button>
         </Link>
       </div>
     </div>

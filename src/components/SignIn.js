@@ -1,19 +1,33 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as faceapi from 'face-api.js';
+import {
+  Box,
+  Button,
+  Typography,
+  Paper,
+  CircularProgress,
+  Container,
+  useMediaQuery,
+  useTheme
+} from '@mui/material';
+import { fetchUsersWithPayments, registerEntry } from '../services/faceApiService';
 
 const SignIn = () => {
   const [isCameraActive, setIsCameraActive] = useState(true);
   const [signInSuccess, setSignInSuccess] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [accessStatus, setAccessStatus] = useState(null);
+  const [noMatchFound, setNoMatchFound] = useState(false);
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const initializeFaceApi = async () => {
     try {
       await faceapi.tf.setBackend('webgl');
       await faceapi.tf.ready();
-    } catch (e) {
-      console.warn('WebGL initialization failed, falling back to CPU backend');
+    } catch {
       await faceapi.tf.setBackend('cpu');
       await faceapi.tf.ready();
     }
@@ -26,70 +40,213 @@ const SignIn = () => {
   const startVideo = () => {
     navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => {
-        videoRef.current.srcObject = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
       })
-      .catch(err => console.error(err));
+      .catch(console.error);
   };
 
   useEffect(() => {
     initializeFaceApi().then(startVideo);
   }, []);
 
-  const handleSignIn = async () => {
-    const detections = await faceapi.detectSingleFace(videoRef.current, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks().withFaceDescriptor();
-    if (detections) {
-      const users = JSON.parse(localStorage.getItem('users')) || [];
-      for (const user of users) {
-        const storedDescriptor = new Float32Array(Object.values(user.faceDescriptor));
-        const distance = faceapi.euclideanDistance(detections.descriptor, storedDescriptor);
-        if (distance < 0.6) { // Adjust threshold as necessary
-            const currentTime = new Date().toISOString();
-            user.lastSignIn = currentTime;
-            localStorage.setItem('users', JSON.stringify(users));
+  const checkCurrentPayment = (pagos) => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1;
+    return pagos.some(p => p.año === currentYear && p.mes === currentMonth && p.pagado);
+  };
 
-          setSignInSuccess(true);
-          setUserData(user);
-          setIsCameraActive(false);
-          return;
+  const handleFaceRecognition = async (detection) => {
+    if (!detection?.descriptor) return;
+
+    const users = await fetchUsersWithPayments();
+    let matchFound = false;
+
+    for (const user of users) {
+      const descriptor = new Float32Array(Object.values(user.faceDescriptor || {}));
+      if (descriptor.length !== 128) continue;
+
+      const distance = faceapi.euclideanDistance(detection.descriptor, descriptor);
+      if (distance < 0.6) {
+        matchFound = true;
+        const now = new Date().toISOString();
+        user.lastSignIn = now;
+        setUserData(user);
+        setSignInSuccess(true);
+        setIsCameraActive(false);
+
+        const pagoAlDia = checkCurrentPayment(user.pagos);
+        setAccessStatus(pagoAlDia ? 'granted' : 'denied');
+
+        if (pagoAlDia) {
+          await registerEntry(user.codigo);
         }
+
+        break;
       }
-      alert('Face not recognized. Please try again.');
+    }
+
+    if (!matchFound) {
+      setNoMatchFound(true);
+      setSignInSuccess(false);
+      setUserData(null);
+      setAccessStatus(null);
     }
   };
 
+  const resetSignIn = () => {
+    setIsCameraActive(false);
+    setTimeout(() => {
+      setSignInSuccess(false);
+      setUserData(null);
+      setAccessStatus(null);
+      setNoMatchFound(false);
+      setIsCameraActive(true);
+      startVideo();
+    }, 200);
+  };
+
+  const detectFace = async () => {
+    const video = videoRef.current;
+    if (!video || video.readyState < 2) return;
+
+    const detection = await faceapi
+      .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if (detection) handleFaceRecognition(detection);
+  };
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (isCameraActive) detectFace();
+    }, 1000);
+    return () => clearInterval(intervalId);
+  }, [isCameraActive]);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-r from-green-500 to-blue-600">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-        {isCameraActive ? (
-          <div className="text-center">
-            <video ref={videoRef} autoPlay muted className="w-full h-auto rounded-lg mb-4"></video>
-            <button onClick={handleSignIn} className="px-6 py-3 bg-green-500 text-white font-semibold rounded-lg shadow-md hover:bg-green-600">
-              Sign In
-            </button>
-          </div>
-        ) : signInSuccess && userData ? (
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-4">Welcome, {userData.name}!</h2>
-            <p className="mb-2"><strong>Email:</strong> {userData.email}</p>
-            <p className="mb-2"><strong>Mobile:</strong> {userData.mobile}</p>
-            <p className="mb-2"><strong>Gender:</strong> {userData.gender}</p>
-            <p className="mb-2"><strong>Last Sign-In:</strong> {new Date(userData.lastSignIn).toLocaleString()}</p>
-            
-            <button onClick={() => setIsCameraActive(true)} className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 mt-4">
-              Sign Out
-            </button>
-          </div>
-        ) : (
-          <div className="text-center">
-            <p className="text-red-500">Face not recognized. Please try again.</p>
-            <button onClick={() => setIsCameraActive(true)} className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-lg shadow-md hover:bg-blue-600 mt-4">
-              Retry
-            </button>
-          </div>
-        )}
-        <canvas ref={canvasRef} className="hidden"></canvas>
-      </div>
-    </div>
+    <Box sx={{
+      minHeight: '100vh',
+      background: 'linear-gradient(to right, #000, #444)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      px: 2,
+      py: 4
+    }}>
+      <Container maxWidth="sm">
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+          <img
+            src="/Logo-Transmite.png"
+            alt="Logo"
+            style={{
+              maxWidth: isMobile ? '80%' : '60%',
+              height: 'auto'
+            }}
+          />
+        </Box>
+
+        <Paper elevation={6} sx={{
+          p: isMobile ? 2 : 4,
+          borderRadius: 2,
+          textAlign: 'center',
+          backgroundColor: '#fff'
+        }}>
+          {isCameraActive ? (
+            <>
+              <Box sx={{
+                width: '100%',
+                aspectRatio: '4/3',
+                borderRadius: '8px',
+                overflow: 'hidden',
+                backgroundColor: '#000'
+              }}>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  muted
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </Box>
+              <Typography variant="h6" mt={2}>
+                Detectando rostro...
+              </Typography>
+            </>
+          ) : signInSuccess && userData ? (
+            <>
+              <Typography
+                variant="h5"
+                fontWeight="bold"
+                color={accessStatus === 'granted' ? 'green' : 'error'}
+              >
+                {accessStatus === 'granted' ? 'ACCESO CONCEDIDO' : 'ACCESO DENEGADO'}
+              </Typography>
+              <Typography>
+                {accessStatus === 'granted'
+                  ? 'SU ASISTENCIA FUE REGISTRADA CON ÉXITO'
+                  : 'SU ASISTENCIA NO SERÁ REGISTRADA'}
+              </Typography>
+
+              <Typography variant="h6" mt={2}>
+                ¡Bienvenido, {userData.nombre} {userData.apellido}!
+              </Typography>
+              <Typography>
+                Código de Estudiante: <strong>{userData.codigo}</strong>
+              </Typography>
+              <Typography>
+                Carrera: <strong>{userData.tipoSocio}</strong>
+              </Typography>
+              <Typography>
+                Último ingreso:{' '}
+                <strong>
+                  {new Date(userData.lastSignIn).toLocaleString('es-BO', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </strong>
+              </Typography>
+
+              {accessStatus === 'denied' && (
+                <Typography color="error" mt={2}>
+                  Por favor, apersónese a pagar su cuota del mes actual para habilitar su ingreso.
+                </Typography>
+              )}
+
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={resetSignIn}
+                sx={{ mt: 3 }}
+              >
+                Continuar
+              </Button>
+            </>
+          ) : noMatchFound ? (
+            <>
+              <Typography color="error">
+                Rostro no reconocido. Por favor, intente nuevamente.
+              </Typography>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={resetSignIn}
+                sx={{ mt: 2 }}
+              >
+                Reintentar
+              </Button>
+            </>
+          ) : (
+            <CircularProgress />
+          )}
+        </Paper>
+      </Container>
+    </Box>
   );
 };
 
