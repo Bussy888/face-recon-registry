@@ -17,3 +17,11 @@ export const registerEntry = async (codigo_socio) => {
     console.error('Error registrando entrada:', error);
   }
 };
+
+export const registerWithCode = async (codigo_socio) => {
+  try {
+    await jsonServerInstance.post('/socios/register-with-code/get-socio/:codigo', { codigo_socio });
+  } catch (error) {
+    console.error('Error registrando socio con código:', error);
+  }
+};

@@ -8,9 +8,11 @@ import {
   CircularProgress,
   Container,
   useMediaQuery,
+  Grid,
   useTheme
 } from '@mui/material';
 import { fetchUsersWithPayments, registerEntry } from '../services/faceApiService';
+import { useNavigate } from 'react-router-dom';
 
 const SignIn = () => {
   const [isCameraActive, setIsCameraActive] = useState(true);
@@ -19,7 +21,7 @@ const SignIn = () => {
   const [accessStatus, setAccessStatus] = useState(null);
   const [noMatchFound, setNoMatchFound] = useState(false);
   const videoRef = useRef(null);
-
+  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -107,6 +109,18 @@ const SignIn = () => {
       startVideo();
     }, 200);
   };
+  const goToHome = () => {
+    setIsCameraActive(false);
+    setTimeout(() => {
+      setSignInSuccess(false);
+      setUserData(null);
+      setAccessStatus(null);
+      setNoMatchFound(false);
+      setIsCameraActive(true);
+      startVideo();
+    }, 200);
+    navigate('/');
+  };
 
   const detectFace = async () => {
     const video = videoRef.current;
@@ -174,6 +188,14 @@ const SignIn = () => {
               <Typography variant="h6" mt={2}>
                 Detectando rostro...
               </Typography>
+              <Button
+                                  variant="outlined"
+                                  color="error"
+                                  onClick={() => navigate('/')}
+                                  sx={{ mt: 2 }}
+                                >
+                                  Volver al Inicio
+                                </Button>
             </>
           ) : signInSuccess && userData ? (
             <>
@@ -221,7 +243,7 @@ const SignIn = () => {
               <Button
                 variant="contained"
                 color="primary"
-                onClick={resetSignIn}
+                onClick={goToHome}
                 sx={{ mt: 3 }}
               >
                 Continuar
@@ -232,6 +254,8 @@ const SignIn = () => {
               <Typography color="error">
                 Rostro no reconocido. Por favor, intente nuevamente.
               </Typography>
+              <Grid container justifyContent="center" mt={2}>
+                <Grid size={{ xs: 12, sm: 6 }}>
               <Button
                 variant="contained"
                 color="primary"
@@ -240,6 +264,19 @@ const SignIn = () => {
               >
                 Reintentar
               </Button>
+              </Grid>
+              <Grid size={{ xs: 12, sm: 6 }}>
+              <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => navigate('/')}
+                    sx={{ mt: 2 }}
+                  >
+                    Volver al Inicio
+                  </Button>
+                  </Grid>
+                  </Grid>
+
             </>
           ) : (
             <CircularProgress />

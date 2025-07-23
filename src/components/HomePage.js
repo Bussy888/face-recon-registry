@@ -7,22 +7,18 @@ const HomePage = () => {
     <div className="homepage-container">
       {/* Logo en la parte superior */}
       <img
-        src="/logo.png"
+        src="/Logo-Transmite.png"
         alt="Logo de la Empresa"
         className="homepage-logo"
       />
 
       <div className="homepage-buttons">
-        <Link to="/signup">
-          <button className="homepage-button">Registrarme Por Primera Vez</button>
+        <Link to="/face-login">
+          <button className="homepage-button">Usar Rostro</button>
         </Link>
 
-        <Link to="/signin">
-          <button className="homepage-button">Registrarme</button>
-        </Link>
-        
-        <Link to="/invitados">
-          <button className="homepage-button">Solo Invitados</button>
+        <Link to="/code-login">
+          <button className="homepage-button">Usar Código</button>
         </Link>
       </div>
     </div>
